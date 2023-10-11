@@ -4,7 +4,9 @@
 #include <cstdlib>
 #include <immintrin.h>
 #include <iostream>
+#include <omp.h>
 #include <png.h>
+#include <ranges>
 #include <vector>
 
 typedef struct Pixel3 {
@@ -17,10 +19,52 @@ class Image {
   public:
     Image(uint32_t width, uint32_t height, std::vector<Pixel3> &buf)
         : _width(width), _height(height), _buf(buf){};
+
+    void apply_n_nearest_filter(int32_t n);
+
     uint32_t _width;
     uint32_t _height;
     std::vector<Pixel3> _buf;
 };
+
+void Image::apply_n_nearest_filter(int32_t n) {
+    std::vector<Pixel3> filtered_buf = this->_buf;
+
+    auto lines = this->_buf | std::views::chunk(this->_width);
+
+#pragma omp parallel for
+    for (int64_t y = 0; y < this->_height; ++y) {
+        for (int64_t x = 0; x < this->_width; ++x) {
+            uint32_t sum_r = 0;
+            uint32_t sum_g = 0;
+            uint32_t sum_b = 0;
+
+            uint32_t count = 0;
+
+            for (int64_t yy = std::max((int64_t)0, y - n);
+                 yy < std::min((int64_t)this->_height, y + n); ++yy) {
+
+                auto cur_line = lines[yy];
+
+                for (int64_t xx = std::max((int64_t)0, x - n);
+                     xx < std::min((int64_t)this->_width, x + n); ++xx) {
+
+                    sum_r += cur_line[xx].r;
+                    sum_g += cur_line[xx].g;
+                    sum_b += cur_line[xx].b;
+
+                    ++count;
+                }
+            }
+
+            filtered_buf[y * this->_width + x].r = sum_r / count;
+            filtered_buf[y * this->_width + x].g = sum_g / count;
+            filtered_buf[y * this->_width + x].b = sum_b / count;
+        }
+    }
+
+    this->_buf = filtered_buf;
+}
 
 Image read_png(const char *filename) {
     FILE *infile = fopen(filename, "rb");
@@ -48,7 +92,7 @@ Image read_png(const char *filename) {
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     fclose(infile);
 
-    return Image(width, height, pixel_data);
+    return Image{width, height, pixel_data};
 }
 
 void write_png(const char *filename, const Image &image) {
@@ -83,13 +127,11 @@ void write_png(const char *filename, const Image &image) {
     fclose(fp);
 }
 
-// std::vector<uint8_t>
-// apply_nearest_filter(const std::vector<uint8_t> &pixel_data){
-//     // neue klasse fuer bilder??
-// };
-
 int main() {
     auto image = read_png("wave.png");
+
+    image.apply_n_nearest_filter(5);
+
     write_png("wave_cp.png", image);
 
     return 0;
