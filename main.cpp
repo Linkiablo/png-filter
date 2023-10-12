@@ -181,7 +181,7 @@ void write_png(const char *filename, const Image &image) {
 int main() {
     auto image = read_png("wave.png");
 
-    image.apply_nearest_filter(3, 3);
+    image.apply_nearest_filter_simd(3, 3);
 
     write_png("wave_cp.png", image);
 
@@ -196,6 +196,6 @@ int main() {
     // assert(p.g == 4);
     // assert(p.b == 6);
 
-    // return 0;
+    return 0;
 }
 #endif

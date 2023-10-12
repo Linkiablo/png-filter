@@ -13,29 +13,29 @@ typedef struct Pixel3 {
 } Pixel3;
 
 typedef struct Pixel3Sum {
-    __m128i inner;
+    __m128 inner;
 
-    Pixel3Sum() { this->inner = _mm_setzero_si128(); }
+    Pixel3Sum() { this->inner = _mm_setzero_ps(); }
 
     Pixel3Sum &operator+=(const Pixel3 &rhs) {
         // auto other = _mm_setr_epi32(rhs.r, rhs.g, rhs.b, 1);
-        auto other = _mm_set_epi32(rhs.r, rhs.g, rhs.b, 1);
-        this->inner = _mm_add_epi32(this->inner, other);
+        auto other = _mm_set_ps(rhs.r, rhs.g, rhs.b, 1);
+        this->inner = _mm_add_ps(this->inner, other);
 
         return *this;
     }
 
     Pixel3 to_pixel_3() {
         // uint32_t count = ((uint32_t *)&(this->inner))[3];
-	
-	auto tmp = _mm_cvtepi32_ps(this->inner);
-	auto packed_count = _mm_set1_ps(((uint32_t *)&(this->inner))[0]);
-	tmp = _mm_div_ps(tmp, packed_count);
-	this->inner = _mm_cvtps_epi32(tmp);
 
-        uint8_t r = ((uint32_t *)&(this->inner))[3];
-        uint8_t g = ((uint32_t *)&(this->inner))[2];
-        uint8_t b = ((uint32_t *)&(this->inner))[1];
+        // auto tmp = _mm_cvtepi32_ps(this->inner);
+        auto packed_count = _mm_set1_ps(((float *)&(this->inner))[0]);
+        this->inner = _mm_div_ps(this->inner, packed_count);
+        auto inner_int = _mm_cvtps_epi32(this->inner);
+
+        uint8_t r = ((uint32_t *)&(inner_int))[3];
+        uint8_t g = ((uint32_t *)&(inner_int))[2];
+        uint8_t b = ((uint32_t *)&(inner_int))[1];
 
         auto res = Pixel3{r, g, b};
 
