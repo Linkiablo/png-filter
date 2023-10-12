@@ -157,7 +157,7 @@ void write_png(const char *filename, const Image &image) {
                  PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                  PNG_FILTER_TYPE_DEFAULT);
 
-    // TODO: entfernen fuer default
+    // entfernen fuer default
     png_set_compression_level(png_ptr, 0);
 
     png_init_io(png_ptr, fp);
@@ -181,10 +181,21 @@ void write_png(const char *filename, const Image &image) {
 int main() {
     auto image = read_png("wave.png");
 
-    image.apply_nearest_filter_simd(3, 3);
+    image.apply_nearest_filter(3, 3);
 
     write_png("wave_cp.png", image);
 
-    return 0;
+    // auto ps = Pixel3Sum();
+
+    // ps += Pixel3{2, 3, 4};
+    // ps += Pixel3{4, 6, 8};
+
+    // auto p = ps.to_pixel_3();
+
+    // assert(p.r == 3);
+    // assert(p.g == 4);
+    // assert(p.b == 6);
+
+    // return 0;
 }
 #endif
