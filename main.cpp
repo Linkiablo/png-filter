@@ -9,25 +9,75 @@
 #include <ranges>
 #include <vector>
 
-typedef struct Pixel3 {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} Pixel3;
+#include "image.hpp"
 
-class Image {
-  public:
-    Image(uint32_t width, uint32_t height, std::vector<Pixel3> &buf)
-        : _width(width), _height(height), _buf(buf){};
+void Image::apply_nearest_filter(int32_t nx, int32_t ny) {
+    std::vector<Pixel3> filtered_buf = this->_buf;
 
-    void apply_n_nearest_filter(int32_t n);
+    auto lines = this->_buf | std::views::chunk(this->_width);
 
-    uint32_t _width;
-    uint32_t _height;
-    std::vector<Pixel3> _buf;
-};
+    for (int64_t y = 0; y < this->_height; ++y) {
+        for (int64_t x = 0; x < this->_width; ++x) {
+            uint32_t sum_r = 0;
+            uint32_t sum_g = 0;
+            uint32_t sum_b = 0;
 
-void Image::apply_n_nearest_filter(int32_t n) {
+            uint32_t count = 0;
+
+            for (int64_t yy = std::max((int64_t)0, y - ny);
+                 yy < std::min((int64_t)this->_height, y + ny); ++yy) {
+
+                auto cur_line = lines[yy];
+
+                for (int64_t xx = std::max((int64_t)0, x - nx);
+                     xx < std::min((int64_t)this->_width, x + nx); ++xx) {
+
+                    sum_r += cur_line[xx].r;
+                    sum_g += cur_line[xx].g;
+                    sum_b += cur_line[xx].b;
+
+                    ++count;
+                }
+            }
+
+            filtered_buf[y * this->_width + x].r = sum_r / count;
+            filtered_buf[y * this->_width + x].g = sum_g / count;
+            filtered_buf[y * this->_width + x].b = sum_b / count;
+        }
+    }
+
+    this->_buf = filtered_buf;
+}
+
+void Image::apply_nearest_filter_simd(int32_t nx, int32_t ny) {
+    std::vector<Pixel3> filtered_buf = this->_buf;
+
+    auto lines = this->_buf | std::views::chunk(this->_width);
+
+    for (int64_t y = 0; y < this->_height; ++y) {
+        for (int64_t x = 0; x < this->_width; ++x) {
+            Pixel3Sum sum = Pixel3Sum();
+
+            for (int64_t yy = std::max((int64_t)0, y - ny);
+                 yy < std::min((int64_t)this->_height, y + ny); ++yy) {
+
+                auto cur_line = lines[yy];
+
+                for (int64_t xx = std::max((int64_t)0, x - nx);
+                     xx < std::min((int64_t)this->_width, x + nx); ++xx) {
+
+                    sum += cur_line[xx];
+                }
+            }
+
+            filtered_buf[y * this->_width + x] = sum.to_pixel_3();
+        }
+    }
+
+    this->_buf = filtered_buf;
+}
+
+void Image::apply_nearest_filter_omp(int32_t nx, int32_t ny) {
     std::vector<Pixel3> filtered_buf = this->_buf;
 
     auto lines = this->_buf | std::views::chunk(this->_width);
@@ -41,13 +91,13 @@ void Image::apply_n_nearest_filter(int32_t n) {
 
             uint32_t count = 0;
 
-            for (int64_t yy = std::max((int64_t)0, y - n);
-                 yy < std::min((int64_t)this->_height, y + n); ++yy) {
+            for (int64_t yy = std::max((int64_t)0, y - ny);
+                 yy < std::min((int64_t)this->_height, y + ny); ++yy) {
 
                 auto cur_line = lines[yy];
 
-                for (int64_t xx = std::max((int64_t)0, x - n);
-                     xx < std::min((int64_t)this->_width, x + n); ++xx) {
+                for (int64_t xx = std::max((int64_t)0, x - nx);
+                     xx < std::min((int64_t)this->_width, x + nx); ++xx) {
 
                     sum_r += cur_line[xx].r;
                     sum_g += cur_line[xx].g;
@@ -127,12 +177,14 @@ void write_png(const char *filename, const Image &image) {
     fclose(fp);
 }
 
+#ifndef _BENCH
 int main() {
     auto image = read_png("wave.png");
 
-    image.apply_n_nearest_filter(5);
+    image.apply_nearest_filter_simd(3, 3);
 
     write_png("wave_cp.png", image);
 
     return 0;
 }
+#endif
