@@ -5,29 +5,40 @@ project(png_filter)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-string(TOLOWER ${CMAKE_BUILD_TYPE} profile)
-if(profile STREQUAL "debug")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_OMP -fopenmp -ggdb -march=native -Wall -Wextra -Wpedantic -fsanitize=address -fsanitize=leak")
-elseif(profile STREQUAL "release")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -D_USE_OMP -fopenmp -march=native")
-elseif(profile STREQUAL "bench")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -D_BENCH -D_USE_OMP -fopenmp -march=native")
-
-	find_package(benchmark REQUIRED)
-
-	add_executable(bench bench.cpp main.cpp)
-	target_link_libraries(bench libpng.so)
-	target_link_libraries(bench libgomp.so)
-	target_link_libraries(bench benchmark::benchmark)
-
-	return()
+find_library(LIBASAN NAMES "asan" "libasan" "libasan.so" "libasan.so.8")
+if(NOT LIBASAN)
+	message(FATAL_ERROR "libasan not found!")
 endif()
+
+find_library(LIBPNG NAMES "png" "libpng" "libpng.so")
+if(NOT LIBPNG)
+	message(FATAL_ERROR "libpng not found!")
+endif()
+
+find_library(LIBGOMP NAMES "gomp" "libgomp" "libgomp.so" "libgomp.so.1")
+if(NOT LIBGOMP)
+	message(FATAL_ERROR "libgomp not found!")
+endif()
+
+find_package(benchmark REQUIRED)
 
 add_executable(png_filter main.cpp)
 
-target_compile_definitions(png_filter PRIVATE
-  $<$<CONFIG:Debug>:DEBUG_BUILD>
+set(DEBUG_FLAGS "-fopenmp" "-ggdb" "-march=native" "-Wall" "-Wextra" "-Wpedantic"
+	"-fsanitize=address" "-fsanitize=leak")
+set(RELEASE_FLAGS "-fopenmp" "-march=native" "-O2")
+target_compile_options(png_filter PUBLIC
+	$<$<CONFIG:Debug>:${DEBUG_FLAGS}>
+	$<$<CONFIG:Release>:${RELEASE_FLAGS}>
+	$<$<CONFIG:Bench>:${RELEASE_FLAGS}>
 )
 
-target_link_libraries(png_filter libpng.so)
-target_link_libraries(png_filter libgomp.so)
+target_compile_definitions(png_filter PUBLIC
+	$<$<CONFIG:Bench>:"_BENCH">
+)
+
+target_link_libraries(png_filter
+	$<$<CONFIG:Debug>:${LIBASAN} ${LIBPNG} ${LIBGOMP}>
+	$<$<CONFIG:Release>:${LIBPNG} ${LIBGOMP}>
+	$<$<CONFIG:Bench>:benchmark::benchmark ${LIBPNG} ${LIBGOMP}>
+)
