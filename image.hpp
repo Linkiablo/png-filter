@@ -3,9 +3,9 @@
 #include <emmintrin.h>
 #include <immintrin.h>
 #include <iostream>
+#include <png.h>
 #include <stdint.h>
 #include <vector>
-#include <png.h>
 
 typedef struct Pixel3 {
     uint8_t r;
@@ -50,6 +50,7 @@ class Image {
         : _width(width), _height(height), _buf(buf){};
 
     void apply_nearest_filter(int32_t nx, int32_t ny);
+    void apply_nearest_filter_avx(int32_t nx, int32_t ny);
     void apply_nearest_filter_omp(int32_t nx, int32_t ny);
     void apply_nearest_filter_simd(int32_t nx, int32_t ny);
 
