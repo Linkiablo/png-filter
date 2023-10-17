@@ -21,7 +21,7 @@ void Image::apply_nearest_filter(int32_t nx, int32_t ny) {
     std::vector<Pixel3> filtered_buf(new_width * new_height,
                                      {.r = 0, .g = 0, .b = 0});
 
-    auto count = (nx * 2) * (ny * 2);
+    auto count = (nx * 2 + 1) * (ny * 2 + 1);
 
     auto lines = this->_buf | std::views::chunk(this->_width);
 
@@ -31,10 +31,10 @@ void Image::apply_nearest_filter(int32_t nx, int32_t ny) {
             uint32_t sum_g = 0;
             uint32_t sum_b = 0;
 
-            for (int64_t yy = y - ny; yy < y + ny; ++yy) {
+            for (int64_t yy = y - ny; yy <= y + ny; ++yy) {
                 auto cur_line = lines[yy];
 
-                for (int64_t xx = x - nx; xx < x + nx; ++xx) {
+                for (int64_t xx = x - nx; xx <= x + nx; ++xx) {
                     sum_r += cur_line[xx].r;
                     sum_g += cur_line[xx].g;
                     sum_b += cur_line[xx].b;
@@ -66,11 +66,11 @@ void Image::apply_nearest_filter_simd(int32_t nx, int32_t ny) {
         for (int64_t x = nx; x < this->_width - nx; ++x) {
             Pixel3Sum sum = Pixel3Sum();
 
-            for (int64_t yy = y - ny; yy < y + ny; ++yy) {
+            for (int64_t yy = y - ny; yy <= y + ny; ++yy) {
 
                 auto cur_line = lines[yy];
 
-                for (int64_t xx = x - nx; xx < x + nx; ++xx) {
+                for (int64_t xx = x - nx; xx <= x + nx; ++xx) {
 
                     sum += cur_line[xx];
                 }
@@ -104,10 +104,10 @@ void Image::apply_nearest_filter_omp(int32_t nx, int32_t ny) {
             uint32_t sum_g = 0;
             uint32_t sum_b = 0;
 
-            for (int64_t yy = y - ny; yy < y + ny; ++yy) {
+            for (int64_t yy = y - ny; yy <= y + ny; ++yy) {
                 auto cur_line = lines[yy];
 
-                for (int64_t xx = x - nx; xx < x + nx; ++xx) {
+                for (int64_t xx = x - nx; xx <= x + nx; ++xx) {
                     sum_r += cur_line[xx].r;
                     sum_g += cur_line[xx].g;
                     sum_b += cur_line[xx].b;
