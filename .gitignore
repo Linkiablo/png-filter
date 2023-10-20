@@ -1,2 +1,5 @@
 build
 
+.ccls-cache
+Cargo.lock
+target
