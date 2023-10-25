@@ -1,6 +1,3 @@
-#ifdef _BENCH
-#include <benchmark/benchmark.h>
-#endif
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -117,34 +114,7 @@ void Image::apply_nearest_filter_omp(int32_t nx, int32_t ny) {
     this->_buf = filtered_buf;
 }
 
-#ifdef _BENCH
-static void BM_standard_filter(benchmark::State &state) {
-    auto image = read_png("wave.png");
-
-    for (auto _ : state)
-        image.apply_nearest_filter(1, 1);
-}
-BENCHMARK(BM_standard_filter);
-
-static void BM_simd_filter(benchmark::State &state) {
-    auto image = read_png("wave.png");
-
-    for (auto _ : state)
-        image.apply_nearest_filter_simd(1, 1);
-}
-BENCHMARK(BM_simd_filter);
-
-static void BM_omp_filter(benchmark::State &state) {
-    auto image = read_png("wave.png");
-
-    for (auto _ : state)
-        image.apply_nearest_filter_omp(1, 1);
-}
-BENCHMARK(BM_omp_filter);
-
-BENCHMARK_MAIN();
-
-#else
+#ifndef _BENCH
 int main() {
     auto image = read_png("wave.png");
 

@@ -5,6 +5,7 @@ project(png_filter)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+
 find_library(LIBASAN NAMES "asan" "libasan" "libasan.so" "libasan.so.8")
 if(NOT LIBASAN)
 	message(FATAL_ERROR "libasan not found!")
@@ -22,7 +23,17 @@ endif()
 
 find_package(benchmark REQUIRED)
 
-add_executable(png_filter main.cpp)
+
+add_executable(png_filter)
+set(DEBUG_SOURCES "cpu.cpp" "image.cpp")
+set(BENCH_SOURCES "cpu.cpp" "image.cpp" "bench.cpp")
+
+target_sources(png_filter PUBLIC
+	$<$<CONFIG:Debug>:${DEBUG_SOURCES}>
+	$<$<CONFIG:Release>:${DEBUG_SOURCES}>
+	$<$<CONFIG:Bench>:${BENCH_SOURCES}>
+)
+
 
 set(DEBUG_FLAGS "-fopenmp" "-ggdb" "-march=native" "-Wall" "-Wextra" "-Wpedantic"
 	"-fsanitize=address" "-fsanitize=leak")
