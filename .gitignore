@@ -3,4 +3,4 @@ build
 .ccls-cache
 Cargo.lock
 target
-wave*
+*.png
